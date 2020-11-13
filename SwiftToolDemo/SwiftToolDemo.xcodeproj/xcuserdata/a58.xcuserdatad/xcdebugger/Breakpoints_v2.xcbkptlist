@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Bucket
+   uuid = "90D74393-B968-43B3-846B-554D72303EE1"
+   type = "1"
+   version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "F9EF2CF2-8ED3-46F1-8EFA-7D73021D8FD5"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "SwiftToolDemo/File.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "16"
+            endingLineNumber = "16"
+            landmarkName = "init()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.AddressBreakpoint">
+         <BreakpointContent
+            uuid = "F3B3973B-6B1E-493C-B3A0-35B6ECE76628"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            symbolName = "*0x100bed614">
+            <Locations>
+               <Location
+                  uuid = "F3B3973B-6B1E-493C-B3A0-35B6ECE76628 - e880feea0cab21e4"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "SwiftToolDemo.MyClass.init() -&gt; SwiftToolDemo.MyClass"
+                  moduleName = "SwiftToolDemo"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/a58/Desktop/SwiftToolDemo/SwiftToolDemo/File.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "16"
+                  endingLineNumber = "16"
+                  offsetFromSymbolStart = "104">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.AddressBreakpoint">
+         <BreakpointContent
+            uuid = "A69EDDC4-A9C2-4D84-825C-41CA43A6896B"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            symbolName = "*0x100bed618">
+            <Locations>
+               <Location
+                  uuid = "A69EDDC4-A9C2-4D84-825C-41CA43A6896B - e880feea0cab21e4"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "SwiftToolDemo.MyClass.init() -&gt; SwiftToolDemo.MyClass"
+                  moduleName = "SwiftToolDemo"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/a58/Desktop/SwiftToolDemo/SwiftToolDemo/File.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "16"
+                  endingLineNumber = "16"
+                  offsetFromSymbolStart = "108">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.AddressBreakpoint">
+         <BreakpointContent
+            uuid = "28578525-84D9-419E-8520-7A79DC40E1F6"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            symbolName = "*0x100bed61c">
+            <Locations>
+               <Location
+                  uuid = "28578525-84D9-419E-8520-7A79DC40E1F6 - e880feea0cab21e4"
+                  shouldBeEnabled = "Yes"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "SwiftToolDemo.MyClass.init() -&gt; SwiftToolDemo.MyClass"
+                  moduleName = "SwiftToolDemo"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/a58/Desktop/SwiftToolDemo/SwiftToolDemo/File.swift"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "16"
+                  endingLineNumber = "16"
+                  offsetFromSymbolStart = "112">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
+</Bucket>

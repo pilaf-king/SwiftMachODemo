@@ -14,12 +14,11 @@ class ViewController: UIViewController {
         // Do any additional setup after loading the view.
         
         let myTest = MyTestClass.init()
-        
 
         var result = myTest.oriFunc(_name: "before")
         print("return \(result)")
         
-        WBOCTest.replace(MyTestClass.self, methodIndex0: 0, withClass: MyTestClass.self, methodIndex1: 1);
+        WBOCTest.replace(SubTestClass.self);
         
         result = myTest.oriFunc(_name: "after")
         print("return \(result)")
@@ -28,6 +27,16 @@ class ViewController: UIViewController {
 
 class MyTestClass {
        
+    func repFunc1(_name:String) -> String {
+        print("call repFunc \(_name)")
+        return "repFunc "
+    }
+    
+    func repFunc2(_name:String) -> String {
+        print("call repFunc \(_name)")
+        return "repFunc "
+    }
+    
     func oriFunc(_name:String) -> String {
         print("call oriFunc \(_name)")
         return "oriFunc "
@@ -47,10 +56,21 @@ class SubTestClass : MyTestClass {
         return "oriFunc"
     }
     
+//    override func repFunc(_name:String) -> String {
+//        print("subclass repFunc run \(_name)")
+//        return "repFunc"
+//    }
+}
+
+class SubSubTestClass : SubTestClass {
+    
+    override func oriFunc(_name:String) -> String {
+        print("subclass oriFunc run \(_name)")
+        return "oriFunc"
+    }
+    
     override func repFunc(_name:String) -> String {
         print("subclass repFunc run \(_name)")
         return "repFunc"
     }
 }
-
-

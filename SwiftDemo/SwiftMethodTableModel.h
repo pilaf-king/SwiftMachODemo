@@ -12,13 +12,14 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface SwiftOverrideMethodModel : NSObject
 
+@property (copy,atomic) NSString *overrideClassName;
+
 @property (assign,atomic) uintptr_t overrideClass;
 
 @property (assign,atomic) uintptr_t overrideMethod;
 
 @property (assign,atomic) uintptr_t method;
 
-- (instancetype)initWith:(struct SwiftOverrideMethod* )overrideMethodST linkBase:(uintptr_t)linkBase;
 @end
 
 

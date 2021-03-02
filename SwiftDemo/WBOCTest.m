@@ -27,17 +27,17 @@
     
     if (methods0.count >= mInx0 &&
         methods1.count >= mInx1) {
-    
+        
         uintptr_t imp0 = [methods0[mInx0] unsignedIntegerValue];
         uintptr_t imp1 = [methods1[mInx1] unsignedIntegerValue];
-
+        
         void *p0 = (__bridge void*)obj0;
-
+        
         struct SwiftClass* swiftClass = (struct SwiftClass * )p0;
-
+        
         UInt32 classObjectSize = swiftClass->classObjectSize;
         UInt32  classObjectAddressPoint = swiftClass->classObjectAddressPoint;
-
+        
         int sizeOfVTable = (classObjectSize - classObjectAddressPoint) - 10 * sizeof(NSInteger);
         int totalVTableSize = sizeOfVTable / sizeof(NSInteger);
         
@@ -54,12 +54,48 @@
     }
 }
 
-+ (void)replace:(id)class{
++ (void)doReplace:(struct SwiftClass*)swiftClass oriIMP:(uintptr_t)oriIMP replace:(uintptr_t)replaceIMP{
+    UInt32 classObjectSize = swiftClass->classObjectSize;
+    UInt32  classObjectAddressPoint = swiftClass->classObjectAddressPoint;
     
+    int sizeOfVTable = (classObjectSize - classObjectAddressPoint) - 10 * sizeof(NSInteger);
+    int totalVTableSize = sizeOfVTable / sizeof(NSInteger);
+    for (int i = 0 ; i < totalVTableSize; i++) {
+        uintptr_t tmp = (uintptr_t)swiftClass + (10 + i) * sizeof(NSInteger);
+        uintptr_t funcAddress = (uintptr_t)*(void **)tmp;
+        if (funcAddress == oriIMP) {
+            memset((void*)tmp, 0, sizeof(NSInteger));
+            memcpy((void*)tmp, &replaceIMP, sizeof(NSInteger));
+            break;
+        }
+    }
+}
+
++ (void)replace:(id)class{
+    const struct segment_command_64 *linkedit =  getsegbyname("__LINKEDIT");
+    uintptr_t linkBase = linkedit->vmaddr-linkedit->fileoff;
+    
+    NSString *className = NSStringFromClass([class class]);
+    NSArray *overrideTable = [self findMethodTable:className].overrideTable;
+    struct SwiftClass* swiftClass = (__bridge struct SwiftClass * )class;
+    for (SwiftOverrideMethodModel *overrideMethodModel in overrideTable) {
+        id superclass = swiftClass->superclass;
+        if (!superclass) {continue;}
+        
+        uintptr_t replaceIMP = overrideMethodModel.method;
+        struct SwiftMethod *method = (struct SwiftMethod*)(overrideMethodModel.overrideMethod);
+        uintptr_t oriIMP = (uintptr_t)method + sizeof(UInt32) + method->Offset - linkBase;
+        //目前仅限实例方法生效
+        if ([self getSwiftMethodKind:method] == SwiftMethodKindMethod &&
+            [self getSwiftMethodType:method] == SwiftMethodTypeInstance) {
+            struct SwiftClass* targetClass = (__bridge struct SwiftClass*)superclass;
+            [self doReplace:targetClass oriIMP:oriIMP replace:replaceIMP];
+        }
+    }
 }
 
 + (SwiftMethodTableModel *)findMethodTable:(NSString *)class{
-        
+    
     SwiftMethodTableModel *methodTableModel = [SwiftMethodTableModel new];
     //获取__swift5_types 数据
     NSUInteger textTypesSize = 0;
@@ -70,26 +106,14 @@
     //计算linkBase
     uintptr_t linkBase = linkedit->vmaddr-linkedit->fileoff;
     
-    //遍历__swift5_types，内部包含class、struct、enum
     NSUInteger location = 0;
-    
     for (int i = 0; i < textTypesSize / sizeof(UInt32); i++) {
         
-        //计算出当前正在遍历的4字节在Mach-O文件中的偏移
         uintptr_t offset = (uintptr_t)types + location - linkBase;
-        
         location += sizeof(uint32_t);
-        
-        //exeHeader 是当前运行APP的起始地址，exeHeader + offset 就能得到那4个字节在内存中的地址
         uintptr_t address = exeHeader + offset;
-        
-        //从内存中获取那4字节的内容
         UInt32 content = (UInt32)*(UInt32*)address;
-        
-        //mach-O中记录的是虚拟地址，content + offset 是Swift的相对寻址方式，得到的是虚拟地址，因此需要 - linkBase即为类描述的偏移地址
         uintptr_t typeOffset = content + offset - linkBase;
-        
-        //计算出类的描述在内存中的位置
         uintptr_t typeAddress = exeHeader + typeOffset;
         
         //不是类，则不处理
@@ -100,37 +124,12 @@
         
         NSMutableArray *vTable = @[].mutableCopy;
         NSMutableArray *ovTable = @[].mutableCopy;
-
-        //按SwiftType 结构去解析内存
+        
         struct SwiftBaseType *baseType = (struct SwiftBaseType *)typeAddress;
-    
-        uintptr_t classNameOffset = typeOffset + baseType->Name + 8;
-        
-        char *className = (char *)(exeHeader + classNameOffset);
-        NSString *name = [NSString stringWithFormat:@"%s",className];
-        uintptr_t parentOffset = typeOffset + 1 * 4 + baseType->Parent - linkBase;
-        SwiftKind kind = SwiftKindUnknown;
-        while (kind != SwiftKindModule) {
-
-            uintptr_t parent = exeHeader + parentOffset;
-
-            struct SwiftBaseType *parentType = (struct SwiftBaseType *)parent;
-            kind = parentType->Flag;
-            
-            uintptr_t parentNameContent = parentType->Name;
-            uintptr_t parentNameOffset = parentOffset + 2 * 4 + parentNameContent;
-                        
-            char *parentName = (char *)(exeHeader + parentNameOffset);
-            name = [NSString stringWithFormat:@"%s.%@",parentName,name];
-            
-            uintptr_t parentOffsetContent = parentType->Parent - linkBase;
-            parentOffset = parentOffset + 1 * 4 + parentOffsetContent;
-        }
-        
+        NSString *name = [self getTypeName:typeOffset];
         if (![class isEqualToString:name]) {
             continue;
         }
-        
         //遍历Vtable和overrideTable
         BOOL hasVtable = [self hasVTable:baseType];
         BOOL hasOverrideTable = [self hasOverrideTable:baseType];
@@ -138,32 +137,35 @@
         short genericSize = [self addPlaceholderWithGeneric:typeOffset];
         if (!hasVtable && !hasOverrideTable ) {continue;}
         
-        uintptr_t location = typeOffset + sizeof(struct SwiftClassTypeNoMethods) + 8 + (hasSingletonMetadataInitialization?12:0) + genericSize + linkBase;
-
+        uintptr_t typeLocation = typeOffset + sizeof(struct SwiftClassTypeNoMethods) + (hasVtable?4:0) + (hasSingletonMetadataInitialization?12:0) + genericSize + exeHeader;
+        
         if ([self hasVTable:baseType]) {
-            UInt32* methodNum = (UInt32*)location;
-            uintptr_t methodLocation = 0;
+            UInt32* methodNum = (UInt32*)typeLocation;
+            uintptr_t methodLocation = sizeof(UInt32);
             for (int j = 0; j < *methodNum; j ++) {
-                uintptr_t methodOffset = location + methodLocation;
-                uintptr_t methodAddress = exeHeader + methodOffset;
-                
+                uintptr_t methodAddress = typeLocation + methodLocation;
                 struct SwiftMethod *methodType = (struct SwiftMethod *)methodAddress;
-                uintptr_t imp = ((long)methodType + sizeof(UInt32) + methodType->Offset - linkBase);
-                [vTable addObject:@(imp)];
+                if (methodType->Flag == 0x10) {
+                    uintptr_t imp = ((long)methodType + sizeof(UInt32) + methodType->Offset - linkBase);
+                    [vTable addObject:@(imp)];
+                }
                 methodLocation += sizeof(struct SwiftMethod);
             }
         }
         if ([self hasOverrideTable:baseType]) {
-            UInt32* methodNum = (UInt32*)location;
-            uintptr_t methodLocation = 0;
+            UInt32* methodNum = (UInt32*)typeLocation;
+            uintptr_t methodLocation = sizeof(UInt32);
             for (int j = 0; j < *methodNum; j ++) {
-                uintptr_t methodOffset = location + methodLocation;
-                uintptr_t methodAddress = exeHeader + methodOffset;
-                
+                uintptr_t methodAddress = typeLocation + methodLocation;
                 struct SwiftOverrideMethod *methodType = (struct SwiftOverrideMethod *)methodAddress;
-                SwiftOverrideMethodModel *model = [[SwiftOverrideMethodModel alloc] initWith:methodType linkBase:linkBase];
+                SwiftOverrideMethodModel *model = [SwiftOverrideMethodModel new];
+                uintptr_t overrideTypeAddress = (methodAddress + methodType->OverrideClass - linkBase);
+                model.overrideClass = overrideTypeAddress;
+                model.overrideMethod = (methodAddress + sizeof(UInt32) + methodType->OverrideMethod - linkBase);
+                model.method = (methodAddress + 2 * sizeof(UInt32) + methodType->Method - linkBase);
+                model.overrideClassName = [self getTypeName:(overrideTypeAddress - exeHeader)];
                 [ovTable addObject:model];
-                methodLocation += sizeof(struct SwiftMethod);
+                methodLocation += sizeof(struct SwiftOverrideMethod);
             }
         }
         
@@ -174,6 +176,40 @@
     return methodTableModel;
 }
 
++ (NSString *)getTypeName:(uintptr_t)typeOffset {
+    
+    const struct segment_command_64 *linkedit =  getsegbyname("__LINKEDIT");
+    //计算linkBase
+    uintptr_t linkBase = linkedit->vmaddr-linkedit->fileoff;
+    uintptr_t exeHeader = (uintptr_t)(&_mh_execute_header);
+    uintptr_t typeAddress = exeHeader + typeOffset;
+    
+    //按SwiftType 结构去解析内存
+    struct SwiftBaseType *baseType = (struct SwiftBaseType *)typeAddress;
+    uintptr_t classNameOffset = typeOffset + baseType->Name + 8;
+    char *className = (char *)(exeHeader + classNameOffset);
+    NSString *name = [NSString stringWithFormat:@"%s",className];
+    uintptr_t parentOffset = typeOffset + 1 * 4 + baseType->Parent - linkBase;
+    SwiftKind kind = SwiftKindUnknown;
+    while (kind != SwiftKindModule) {
+        
+        uintptr_t parent = exeHeader + parentOffset;
+        
+        struct SwiftBaseType *parentType = (struct SwiftBaseType *)parent;
+        kind = parentType->Flag;
+        
+        uintptr_t parentNameContent = parentType->Name;
+        uintptr_t parentNameOffset = parentOffset + 2 * 4 + parentNameContent;
+        
+        char *parentName = (char *)(exeHeader + parentNameOffset);
+        name = [NSString stringWithFormat:@"%s.%@",parentName,name];
+        
+        uintptr_t parentOffsetContent = parentType->Parent - linkBase;
+        parentOffset = parentOffset + 1 * 4 + parentOffsetContent;
+    }
+    
+    return name;
+}
 
 #pragma mark Flag
 + (BOOL)hasVTable:(struct SwiftBaseType*)type{
@@ -238,7 +274,7 @@
 + (short)addPlaceholderWithGeneric:(unsigned long long)typeOffset{
     
     struct SwiftType* swiftType = (struct SwiftType* )((uintptr_t)(&_mh_execute_header) + typeOffset);
-        
+    
     if (![self isGeneric:swiftType]) {
         return 0;
     }
@@ -251,7 +287,7 @@
     short requeireCount = 0;
     void *p0 = (void *)((uintptr_t)(&_mh_execute_header) + typeOffset + 13 * 4);
     void *p1 = (void *)((uintptr_t)(&_mh_execute_header) + typeOffset + 13 * 4 + 2);
-
+    
     memcpy(&paramsCount, p0, sizeof(short));
     memcpy(&paramsCount, p1, sizeof(short));
     

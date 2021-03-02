@@ -42,22 +42,6 @@ struct SwiftBaseType {
     int32_t  FieldDescriptor;
 };
 
-struct SwiftClassType {
-    uint32_t Flag;
-    uint32_t Parent;
-    int32_t  Name;
-    int32_t  AccessFunction;
-    int32_t  FieldDescriptor;
-    int32_t  SuperclassType;
-    uint32_t MetadataNegativeSizeInWords;
-    uint32_t MetadataPositiveSizeInWords;
-    uint32_t NumImmediateMembers;
-    uint32_t NumFields;
-    uint32_t Unknow1;
-    uint32_t Offset;
-    uint32_t NumMethods;
-};
-
 struct SwiftClassTypeNoMethods {
     uint32_t Flag;
     uint32_t Parent;
@@ -69,6 +53,7 @@ struct SwiftClassTypeNoMethods {
     uint32_t MetadataPositiveSizeInWords;
     uint32_t NumImmediateMembers;
     uint32_t NumFields;
+    uint32_t FieldOffsetVectorOffset;
 };
 
 struct SwiftClass {

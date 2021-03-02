@@ -28,6 +28,12 @@ struct SwiftMethod {
     uint32_t Offset;
 };
 
+struct SwiftOverrideMethod {
+    uint32_t OverrideClass;
+    uint32_t OverrideMethod;
+    uint32_t Method;
+};
+
 struct SwiftBaseType {
     uint32_t Flag;
     uint32_t Parent;
@@ -50,6 +56,19 @@ struct SwiftClassType {
     uint32_t Unknow1;
     uint32_t Offset;
     uint32_t NumMethods;
+};
+
+struct SwiftClassTypeNoMethods {
+    uint32_t Flag;
+    uint32_t Parent;
+    int32_t  Name;
+    int32_t  AccessFunction;
+    int32_t  FieldDescriptor;
+    int32_t  SuperclassType;
+    uint32_t MetadataNegativeSizeInWords;
+    uint32_t MetadataPositiveSizeInWords;
+    uint32_t NumImmediateMembers;
+    uint32_t NumFields;
 };
 
 struct SwiftClass {
@@ -75,6 +94,23 @@ struct SwiftClass {
     //witnessTable[4]E
     //witnessTable[5]F
     //witnessTable[6]G
+};
+
+typedef NS_ENUM(NSInteger, SwiftMethodKind) {
+    SwiftMethodKindMethod             = 0,     // method
+    SwiftMethodKindInit               = 1,     //init
+    SwiftMethodKindGetter             = 2,     // get
+    SwiftMethodKindSetter             = 3,     // set
+    SwiftMethodKindModify             = 4,     // modify
+    SwiftMethodKindRead               = 5,     // read
+};
+
+typedef NS_ENUM(NSInteger, SwiftMethodType) {
+    SwiftMethodTypeKind                         = 0x0F,
+    SwiftMethodTypeInstance                     = 0x10,
+    SwiftMethodTypeDynamic                      = 0x20,
+    SwiftMethodTypeExtraDiscriminatorShift      = 16,
+    SwiftMethodTypeExtraDiscriminator           = 0xFFFF0000,
 };
 
 

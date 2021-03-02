@@ -9,6 +9,7 @@
 #import <mach-o/getsect.h>
 #import <mach-o/ldsyms.h>
 #import "SwiftDefines.h"
+#import "SwiftMethodTableModel.h"
 
 @implementation WBOCTest
 
@@ -21,8 +22,8 @@
     NSString *className0 = NSStringFromClass([obj0 class]);
     NSString *className1 = NSStringFromClass([obj1 class]);
     
-    NSArray *methods0 = [self findVTableMethods:className0];
-    NSArray *methods1 = [self findVTableMethods:className1];
+    NSArray *methods0 = [self findMethodTable:className0].vTable;
+    NSArray *methods1 = [self findMethodTable:className1].vTable;
     
     if (methods0.count >= mInx0 &&
         methods1.count >= mInx1) {
@@ -53,12 +54,13 @@
     }
 }
 
-+ (void)readyExchageTest:(id)obj{
- 
++ (void)replace:(id)class{
+    
 }
 
-+ (NSArray *)findVTableMethods:(NSString *)class{
++ (SwiftMethodTableModel *)findMethodTable:(NSString *)class{
         
+    SwiftMethodTableModel *methodTableModel = [SwiftMethodTableModel new];
     //获取__swift5_types 数据
     NSUInteger textTypesSize = 0;
     char *types = getsectdata("__TEXT", "__swift5_types", &textTypesSize);
@@ -71,7 +73,6 @@
     //遍历__swift5_types，内部包含class、struct、enum
     NSUInteger location = 0;
     
-    NSMutableArray *methods = @[].mutableCopy;
     for (int i = 0; i < textTypesSize / sizeof(UInt32); i++) {
         
         //计算出当前正在遍历的4字节在Mach-O文件中的偏移
@@ -83,7 +84,7 @@
         uintptr_t address = exeHeader + offset;
         
         //从内存中获取那4字节的内容
-        UInt32 content = (UInt32)*(void **)address;
+        UInt32 content = (UInt32)*(UInt32*)address;
         
         //mach-O中记录的是虚拟地址，content + offset 是Swift的相对寻址方式，得到的是虚拟地址，因此需要 - linkBase即为类描述的偏移地址
         uintptr_t typeOffset = content + offset - linkBase;
@@ -97,6 +98,9 @@
             continue;
         }
         
+        NSMutableArray *vTable = @[].mutableCopy;
+        NSMutableArray *ovTable = @[].mutableCopy;
+
         //按SwiftType 结构去解析内存
         struct SwiftBaseType *baseType = (struct SwiftBaseType *)typeAddress;
     
@@ -127,25 +131,47 @@
             continue;
         }
         
+        //遍历Vtable和overrideTable
+        BOOL hasVtable = [self hasVTable:baseType];
+        BOOL hasOverrideTable = [self hasOverrideTable:baseType];
+        BOOL hasSingletonMetadataInitialization = [self hasSingletonMetadataInitialization:baseType];
+        short genericSize = [self addPlaceholderWithGeneric:typeOffset];
+        if (!hasVtable && !hasOverrideTable ) {continue;}
+        
+        uintptr_t location = typeOffset + sizeof(struct SwiftClassTypeNoMethods) + 8 + (hasSingletonMetadataInitialization?12:0) + genericSize + linkBase;
+
         if ([self hasVTable:baseType]) {
-            struct SwiftClassType *classType = (struct SwiftClassType *)typeAddress;
-            UInt32 methodNum = classType->NumMethods;
+            UInt32* methodNum = (UInt32*)location;
             uintptr_t methodLocation = 0;
-            for (int j = 0; j < methodNum; j ++) {
-                uintptr_t methodOffset = typeOffset + sizeof(struct SwiftClassType) + methodLocation;
+            for (int j = 0; j < *methodNum; j ++) {
+                uintptr_t methodOffset = location + methodLocation;
                 uintptr_t methodAddress = exeHeader + methodOffset;
                 
                 struct SwiftMethod *methodType = (struct SwiftMethod *)methodAddress;
-                if (methodType->Flag == 0x10) {
-                    uintptr_t imp = ((long)methodType + sizeof(UInt32) + methodType->Offset - linkBase);
-                    [methods addObject:@(imp)];
-                }
-                
+                uintptr_t imp = ((long)methodType + sizeof(UInt32) + methodType->Offset - linkBase);
+                [vTable addObject:@(imp)];
                 methodLocation += sizeof(struct SwiftMethod);
             }
         }
+        if ([self hasOverrideTable:baseType]) {
+            UInt32* methodNum = (UInt32*)location;
+            uintptr_t methodLocation = 0;
+            for (int j = 0; j < *methodNum; j ++) {
+                uintptr_t methodOffset = location + methodLocation;
+                uintptr_t methodAddress = exeHeader + methodOffset;
+                
+                struct SwiftOverrideMethod *methodType = (struct SwiftOverrideMethod *)methodAddress;
+                SwiftOverrideMethodModel *model = [[SwiftOverrideMethodModel alloc] initWith:methodType linkBase:linkBase];
+                [ovTable addObject:model];
+                methodLocation += sizeof(struct SwiftMethod);
+            }
+        }
+        
+        methodTableModel.vTable = vTable.copy;
+        methodTableModel.overrideTable = ovTable.copy;
+        
     }
-    return methods.copy;
+    return methodTableModel;
 }
 
 
@@ -153,6 +179,86 @@
 + (BOOL)hasVTable:(struct SwiftBaseType*)type{
     if ((type->Flag & 0x80000000) == 0x80000000) {return YES;}
     return NO;
+}
+
++ (BOOL)hasOverrideTable:(struct SwiftBaseType*)type{
+    if ((type->Flag & 0x40000000) == 0x40000000) {return YES;}
+    return NO;
+}
+
++ (BOOL)isGenericType:(struct SwiftBaseType*)type{
+    if ( (type->Flag & 0x80 )) {return YES;}
+    return NO;
+}
+
++ (BOOL)isGeneric:(struct SwiftType*)type{
+    if ( (type->Flag & 0x80 )) {return YES;}
+    return NO;
+}
+
++ (BOOL)hasSingletonMetadataInitialization:(struct SwiftBaseType*)type{
+    if ( (type->Flag & 0x00010000 )) {return YES;}
+    return NO;
+}
+
++ (SwiftMethodKind)getSwiftMethodKind:(struct SwiftMethod*)method{
+    SwiftMethodKind kind = (SwiftMethodKind)(method->Flag&SwiftMethodTypeKind);
+    return kind;
+}
+
++ (SwiftMethodType)getSwiftMethodType:(struct SwiftMethod*)method{
+    SwiftMethodType type = SwiftMethodTypeKind;
+    if ((method->Flag&SwiftMethodTypeInstance) == SwiftMethodTypeInstance) {
+        type = SwiftMethodTypeInstance;
+    }else if ((method->Flag&SwiftMethodTypeDynamic) == SwiftMethodTypeDynamic){
+        type = SwiftMethodTypeDynamic;
+    }else if ((method->Flag&SwiftMethodTypeExtraDiscriminator) == SwiftMethodTypeExtraDiscriminator){
+        type = SwiftMethodTypeExtraDiscriminator;
+    }
+    return type;
+}
+
++ (SwiftKind)getSwiftType:(struct SwiftType*)type{
+    //读低五位判断类型
+    if ((type->Flag & 0x1f) == SwiftKindClass) {
+        return SwiftKindClass;
+    }else if ((type->Flag & 0x3) == SwiftKindProtocol){
+        return SwiftKindProtocol;
+    }else if((type->Flag & 0x1f) == SwiftKindStruct){
+        return SwiftKindStruct;
+    }else if((type->Flag & 0x1f) == SwiftKindEnum){
+        return SwiftKindEnum;
+    }else if((type->Flag & 0x0f) == SwiftKindModule){
+        return SwiftKindModule;
+    }
+    
+    return SwiftKindUnknown;
+}
+
++ (short)addPlaceholderWithGeneric:(unsigned long long)typeOffset{
+    
+    struct SwiftType* swiftType = (struct SwiftType* )((uintptr_t)(&_mh_execute_header) + typeOffset);
+        
+    if (![self isGeneric:swiftType]) {
+        return 0;
+    }
+    //非class 不处理
+    if ([self getSwiftType:swiftType] != SwiftKindClass) {
+        return 0;
+    }
+    
+    short paramsCount = 0;
+    short requeireCount = 0;
+    void *p0 = (void *)((uintptr_t)(&_mh_execute_header) + typeOffset + 13 * 4);
+    void *p1 = (void *)((uintptr_t)(&_mh_execute_header) + typeOffset + 13 * 4 + 2);
+
+    memcpy(&paramsCount, p0, sizeof(short));
+    memcpy(&paramsCount, p1, sizeof(short));
+    
+    //4字节对齐
+    short pandding = (unsigned)-paramsCount & 3;
+    
+    return (1 * 4 + 4 + 4 + paramsCount + pandding + 3 * 4 * (requeireCount) + 4);
 }
 
 @end

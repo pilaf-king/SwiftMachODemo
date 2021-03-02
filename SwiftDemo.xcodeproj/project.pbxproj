@@ -16,6 +16,7 @@
 		37419AB825E8CBA0007A613C /* SwiftDemoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37419AB725E8CBA0007A613C /* SwiftDemoTests.swift */; };
 		37419AC325E8CBA0007A613C /* SwiftDemoUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37419AC225E8CBA0007A613C /* SwiftDemoUITests.swift */; };
 		37419AD625E8CBBF007A613C /* WBOCTest.m in Sources */ = {isa = PBXBuildFile; fileRef = 37419AD525E8CBBF007A613C /* WBOCTest.m */; };
+		37BE2D1625ED035B00B68782 /* SwiftMethodTableModel.m in Sources */ = {isa = PBXBuildFile; fileRef = 37BE2D1525ED035B00B68782 /* SwiftMethodTableModel.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -54,6 +55,8 @@
 		37419AD425E8CBBF007A613C /* WBOCTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WBOCTest.h; sourceTree = "<group>"; };
 		37419AD525E8CBBF007A613C /* WBOCTest.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = WBOCTest.m; sourceTree = "<group>"; };
 		37419AF525E8F69F007A613C /* SwiftDefines.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SwiftDefines.h; sourceTree = "<group>"; };
+		37BE2D1425ED035B00B68782 /* SwiftMethodTableModel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SwiftMethodTableModel.h; sourceTree = "<group>"; };
+		37BE2D1525ED035B00B68782 /* SwiftMethodTableModel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SwiftMethodTableModel.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -109,6 +112,8 @@
 				37419AA425E8CB9F007A613C /* ViewController.swift */,
 				37419AD425E8CBBF007A613C /* WBOCTest.h */,
 				37419AD525E8CBBF007A613C /* WBOCTest.m */,
+				37BE2D1425ED035B00B68782 /* SwiftMethodTableModel.h */,
+				37BE2D1525ED035B00B68782 /* SwiftMethodTableModel.m */,
 				37419AF525E8F69F007A613C /* SwiftDefines.h */,
 				37419AA625E8CB9F007A613C /* Main.storyboard */,
 				37419AA925E8CBA0007A613C /* Assets.xcassets */,
@@ -270,6 +275,7 @@
 			files = (
 				37419AD625E8CBBF007A613C /* WBOCTest.m in Sources */,
 				37419AA525E8CB9F007A613C /* ViewController.swift in Sources */,
+				37BE2D1625ED035B00B68782 /* SwiftMethodTableModel.m in Sources */,
 				37419AA125E8CB9F007A613C /* AppDelegate.swift in Sources */,
 				37419AA325E8CB9F007A613C /* SceneDelegate.swift in Sources */,
 			);

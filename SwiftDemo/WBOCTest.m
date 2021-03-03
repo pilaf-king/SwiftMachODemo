@@ -30,10 +30,8 @@
         
         uintptr_t imp0 = [methods0[mInx0] unsignedIntegerValue];
         uintptr_t imp1 = [methods1[mInx1] unsignedIntegerValue];
-        
-        void *p0 = (__bridge void*)obj0;
-        
-        struct SwiftClass* swiftClass = (struct SwiftClass * )p0;
+                
+        struct SwiftClass* swiftClass = (__bridge struct SwiftClass * )obj0;
         
         UInt32 classObjectSize = swiftClass->classObjectSize;
         UInt32  classObjectAddressPoint = swiftClass->classObjectAddressPoint;
@@ -86,7 +84,8 @@
         struct SwiftMethod *method = (struct SwiftMethod*)(overrideMethodModel.overrideMethod);
         uintptr_t oriIMP = (uintptr_t)method + sizeof(UInt32) + method->Offset - linkBase;
         //目前仅限实例方法生效
-        if ([self getSwiftMethodKind:method] == SwiftMethodKindMethod &&
+        if (([self getSwiftMethodKind:method] == SwiftMethodKindMethod ||
+             [self getSwiftMethodKind:method] == SwiftMethodKindModify)&&
             [self getSwiftMethodType:method] == SwiftMethodTypeInstance) {
             struct SwiftClass* targetClass = (__bridge struct SwiftClass*)superclass;
             [self doReplace:targetClass oriIMP:oriIMP replace:replaceIMP];
